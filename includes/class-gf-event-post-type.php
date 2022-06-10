@@ -19,6 +19,13 @@ class Gf_Event_Intake_Event_CPT {
     const EVENT_SLUG = 'event';
     const VENUE_SLUG = 'venue';
 
+    static $cast_crew_mapping = array(
+        'image' => 5,
+        'title' => 2,
+        'subtitle' => 3,
+        'desc' => 4,
+    );
+
     /**
 	 * The ID of this plugin.
 	 *
@@ -50,7 +57,45 @@ class Gf_Event_Intake_Event_CPT {
         add_action( 'admin_menu', [$this, 'add_pending_bubbles'] );
         add_action( 'before_delete_post', array(__CLASS__, 'delete_post_attachments') );
         add_filter( 'template_include', [$this, 'set_event_template'], 99 );
+
+        // Sync post author box
+		add_action( 'acf/save_post', array(__CLASS__, 'replace_author_box'), 20);
+        add_action( 'save_post_'.self::EVENT_SLUG, array(__CLASS__, 'sync_custom_user_id'), 10, 2 );
+        
+        add_action( 'save_post_'.self::EVENT_SLUG, array( __CLASS__, 'update_cast_crew_gf_entry'), 20, 3 );
+        //add_filter( 'acf/update_value/name=avatar_image', array( __CLASS__, 'update_cast_crew_gf_entry'), 20, 3 );
+        //add_filter( 'save_post_'.self::EVENT_SLUG, array( __CLASS__, 'update_cast_crew_gf_entry'), 20, 3 );
+        //add_filter( 'save_post_'.self::EVENT_SLUG, array( __CLASS__, 'update_cast_crew_gf_entry'), 20, 3 );
     }
+
+	public static function update_cast_crew_gf_entry( $post_id, $post ) {
+
+        if ( ! is_admin() ) {
+            return;
+        }
+
+        $cast_crew_raw_entries = get_post_meta($post_id, 'cast_crew_raw_data', true);
+        if (!empty($cast_crew_raw_entries)) {
+            $cast_crew_entries = explode(",", $cast_crew_raw_entries);
+            foreach($cast_crew_entries as $index => $entry_id) {
+                $entry = GFAPI::get_entry( $entry_id );
+                if (is_wp_error($entry)) {
+                    error_log( $entry->get_error_message() );
+                    continue;
+                }
+                $keys = array_keys( self::$cast_crew_mapping );
+                foreach($keys as $key) {
+                    $meta_key = "cast_crew_{$index}_{$key}";
+                    $value = get_post_meta( $post_id, $meta_key, true );
+                    if ($key === 'image') {
+                        $value = wp_get_attachment_url($value);
+                    }
+                    $entry[ self::$cast_crew_mapping[ $key ] ] = $value;
+                }
+                $success = GFAPI::update_entry( $entry, $entry_id );
+            }
+        }
+	}
 
     public function set_event_template( $template ) {
         if ( is_singular( [ self::EVENT_SLUG ] )  ) {
@@ -58,6 +103,36 @@ class Gf_Event_Intake_Event_CPT {
         }
         return $template;
     }
+
+    /**
+	 * When updating the post author from the back-end, sync it to the post author.
+	 *
+	 * @param [WP_Post] $post_id
+	 * @return void
+	 */
+	public static function replace_author_box( $post_id ) {
+		if (isset($_POST['post_type']) && ($_POST['post_type'] == self::EVENT_SLUG)) {
+			// get new value
+			$user_id = Gf_Event_Intake_Admin::get_acf_post_option('author', $post_id);
+			if( $user_id ) {
+				wp_update_post( array( 'ID'=>$post_id, 'post_author' => $user_id ) ); 
+			}
+		}	
+	}
+
+	/**
+	 * Sync the current post author with the custom author meta if it doesn't exist.
+	 *
+	 * @param [int] $post_id
+	 * @param WP_Post $post
+	 * @return void
+	 */
+	public static function sync_custom_user_id( $post_id, $post ) {
+		$custom_user_id = Gf_Event_Intake_Admin::get_acf_post_option('author', $post_id);
+		if (!empty($post->post_author) && empty($custom_user_id)) {
+			update_post_meta($post_id, 'author', $post->post_author);
+		}
+	}
 
     public static function get_create_event_page_link($fallback = false) {
         $create_event_page_id = get_option('woocommerce_createevents_page_id');
@@ -74,7 +149,7 @@ class Gf_Event_Intake_Event_CPT {
         if (!empty($edit_event_page_id)) {
             $edit_event_page = get_permalink($edit_event_page_id);
             if (!empty($id)) {
-                $edit_event_page = add_query_arg( [ 'event_id'=> $id ], $edit_event_page );
+                $edit_event_page = add_query_arg( [ 'post_id'=> $id ], $edit_event_page );
             }
         } else {
             $edit_event_page = !empty($fallback) ? $fallback : apply_filters( 'woocommerce_return_to_shop_redirect', wc_get_page_permalink( 'shop' ) );
@@ -198,7 +273,7 @@ class Gf_Event_Intake_Event_CPT {
             'label'                 => __( 'Event', 'gf-event-intake' ),
             'description'           => __( 'Events', 'gf-event-intake' ),
             'labels'                => $labels,
-            'supports'              => array( 'title', 'editor', 'thumbnail', 'author', 'excerpt', 'custom-fields' ),
+            'supports'              => array( 'title', 'editor', 'thumbnail', 'excerpt', 'custom-fields' ),
             'taxonomies'            => array( 'category', 'post_tag' ),
             'hierarchical'          => true,
             'public'                => true,

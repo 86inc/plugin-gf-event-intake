@@ -124,14 +124,13 @@ class Gf_Event_Intake_GForm {
 		// For the event edit page, provide the correct entry ID related to that event.
 		add_filter( "gpep_source_entry_id", [$this,'replace_source_entry_id'], 10, 2 );
 
-		add_filter( "gform_addon_pre_process_feeds_{$this->edit_form_id}", [$this,'preprocess_feeds'], 10, 3 );	
+		//add_filter( "gform_addon_pre_process_feeds_{$this->edit_form_id}", [$this,'preprocess_feeds'], 10, 3 );	
 
 		add_action( "gform_after_submission_{$this->edit_form_id}", [$this, 'map_edit_form_fields'], 10, 2 );
+		add_action( "gform_advancedpostedit_post_after_edit", [$this, 'set_edit_data'], 10, 4 );
 
 		// Not used but sets the values for existing forms based on our data.
 		//add_filter( "gform_pre_render_{$this->edit_form_id}", [$this, 'populate_html'] );
-
-		
 	}
 
 	public function map_edit_form_fields( $entry, $form ) {
@@ -140,7 +139,7 @@ class Gf_Event_Intake_GForm {
 
 		$create_events_page = Gf_Event_Intake_Event_CPT::get_create_event_page_link();
 		// Ensure we have an event to edit.
-		$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
+		$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
 		if (empty( $event_id )) {
 			wp_redirect( $create_events_page );
 		}
@@ -193,7 +192,7 @@ class Gf_Event_Intake_GForm {
 	}
 
 	public function update_image_content_fields_featured_image( $content, $field, $value, $lead_id, $form_id ) {
-		$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
+		$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
 		if (empty( $event_id )) {
 			return $content;
 		}
@@ -241,7 +240,7 @@ class Gf_Event_Intake_GForm {
 		}
 	
 		// Ensure we have an event to edit.
-		$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
+		$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
 		if (empty( $event_id )) {
 			wp_redirect( $create_events_page );
 		}
@@ -270,7 +269,7 @@ class Gf_Event_Intake_GForm {
 		}
 
 		// Ensure we have an event to edit.
-		$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
+		$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
 		if (empty( $event_id )) {
 			wp_redirect( $create_events_page );
 		}
@@ -424,14 +423,6 @@ class Gf_Event_Intake_GForm {
 		return $form;
 	}
 
-	public function add_cast_crew( $entry, $form ) {
-		error_log("Post Creation cast ctew");
-		$event_post_id = gform_get_meta($entry['id'], 'event_post_id');
-		if (empty($event_post_id)) {
-			return;
-		}
-	}
-
 	public function custom_confirmation( $confirmation, $form, $entry, $ajax ) {
 		if (!empty($_GET['redirect-to'])) {
 			$redirect_path = preg_replace('#[^a-zA-Z0-9\-\_]#i', '', $_GET['redirect-to'] );
@@ -472,7 +463,7 @@ class Gf_Event_Intake_GForm {
 	public function cleanup_events( $entry, $form ) {
 		// Ensure we have an event to edit.
 		$entry_id = $entry['id'];
-		$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
+		$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
 		if (empty( $event_id )) {
 			error_log("Could not delete previous old event - {$entry_id}");
 			return;
@@ -499,26 +490,24 @@ class Gf_Event_Intake_GForm {
 	}
 	
 	public function set_event_data( $post_id, $feed, $entry, $form ) {
-		$update = false;
+		//$update = false;
 		$entry_id = $entry['id'];
-		error_log("BEFORE POST CREATION for {$post_id}");
-		if ( ( ( (int) $form['id'] ) !== ( (int) $this->intake_form_id ) ) && ( ( (int) $form['id'] ) !== ( (int) $this->edit_form_id ) ) ) {
+		if ( ( (int) $form['id'] ) !== ( (int) $this->intake_form_id ) && ( (int) $form['id'] ) !== ( (int) $this->edit_form_id ) ) {
 			return;
 		}
 
 		// If we are updating.
-		if (( ( (int) $form['id'] ) !== ( (int) $this->edit_form_id ) )) {
-			$update = true;
-			$event_id = ! empty( $_REQUEST['event_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['event_id']) : false;
-			if (empty( $event_id )) {
-				error_log("Could not update new event - {$entry_id}");
-			}
-		}
+		// if (( ( (int) $form['id'] ) === ( (int) $this->edit_form_id ) )) {
+		// 	$update = true;
+		// 	$event_id = ! empty( $_REQUEST['post_id'] ) ? (int) preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
+		// 	if (empty( $event_id )) {
+		// 		error_log("Could not update new event - {$entry_id}");
+		// 	}
+		// }
 		
 		//getting post and thumbnail image
 		$post = get_post( $post_id );
 		$entry_id = $entry['id'];
-		error_log("After POST CREATION for {$post_id} post type {$post->post_type}");
 		update_post_meta($post_id, 'entry_id', $entry_id);
 		if ($post->post_type === Gf_Event_Intake_Event_CPT::VENUE_SLUG) {
 			gform_update_meta( $entry_id, 'venue_post_id', $post_id );
@@ -542,8 +531,9 @@ class Gf_Event_Intake_GForm {
 						continue;
 					}
 
-					if (!empty($cast_entry[5])) {
-						$attachment_id = attachment_url_to_postid($cast_entry[5]);
+					$thumbnail_entry_key = Gf_Event_Intake_Event_CPT::$cast_crew_mapping['image'];
+					if (!empty($cast_entry[ $thumbnail_entry_key ])) {
+						$attachment_id = attachment_url_to_postid($cast_entry[ $thumbnail_entry_key ]);
 						if (!empty($attachment_id)) {
 							update_post_meta($post_id, "cast_crew_{$index}_image", $attachment_id );
 							//gform_update_meta($cast_entry_id, 'attachment_id', $attachment_id);
@@ -554,9 +544,9 @@ class Gf_Event_Intake_GForm {
 							wp_update_post($attachment_data);
 						}
 					}
-					update_post_meta($post_id, "cast_crew_{$index}_title", $cast_entry[2] );
-					update_post_meta($post_id, "cast_crew_{$index}_subtitle", $cast_entry[3] );
-					update_post_meta($post_id, "cast_crew_{$index}_desc", $cast_entry[4] );
+					update_post_meta($post_id, "cast_crew_{$index}_title", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['title'] ] );
+					update_post_meta($post_id, "cast_crew_{$index}_subtitle", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['subtitle'] ] );
+					update_post_meta($post_id, "cast_crew_{$index}_desc", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['desc'] ] );
 					$count++;
 				}
 				update_post_meta($post_id, "cast_crew", $count );
@@ -578,6 +568,7 @@ class Gf_Event_Intake_GForm {
 					$price = !empty($seating_entry[3]) ? $seating_entry[3] : '';
 
 					if (!empty($seating_type)) {
+						gform_update_meta( $seating_entry_id, 'seating_type', $seating_type );
 						$seating_attrs[$seating_type] = [
 							'name'		=> $seating_type,
 							'quantity' => (int) $max_qty,
@@ -633,7 +624,214 @@ class Gf_Event_Intake_GForm {
 						error_log("GF-IN - Could not create product - {$msg}");
 					} else {
 						$variable_product_id = $variable_product->get_id();
+						gform_update_meta( $date_entry_id, 'product_id', $variable_product_id );
 						$related_product_ids[] = $variable_product_id;
+						update_post_meta($variable_product_id, 'performance_date', $performance_date);
+						update_post_meta($variable_product_id, 'performance_end_date', $performance_end_date);
+						update_post_meta($variable_product_id, 'event_post_id', $post_id);
+						update_post_meta($variable_product_id, '_ticket', 'yes');
+						if (!empty($thumbnail_id)) {
+							update_post_meta($variable_product_id, '_thumbnail_id', $thumbnail_id);
+						}
+						// Set the event terms.
+						$event_types = get_the_terms($post_id, 'event_type');
+						if (!empty($event_types)) {
+							$event_terms = wp_list_pluck($event_types, 'term_id');
+							wp_set_object_terms($variable_product_id, $event_terms, 'event_type');
+						}
+
+						$cutoff_hours = get_post_meta($post_id, 'sales_cut_off', true);
+						if (!empty($cutoff_hours)) {
+							// // it's minus because we are converting it back to GMT timestamp for insertion.
+							$cutoff_time = $performance_datetime_gmt - (((int) $cutoff_hours) * HOUR_IN_SECONDS);
+							$cutoff_datetime = wp_date('Y-m-d H:i:s', $cutoff_time);
+							update_post_meta($variable_product_id, 'sales_cut_off_datetime', $cutoff_datetime);
+							$this->schedule_product_cutoff_action($cutoff_datetime, $variable_product_id);	
+						}
+					}
+				endforeach;
+				// Set related products.
+				if (!empty($related_product_ids)) {
+					update_post_meta($post_id, "related_products", $related_product_ids );
+				}
+			}
+
+		} // end create event post
+	}
+
+	public function set_edit_data( $post_id, $feed, $entry, $form ) {
+		$update = false;
+		$entry_id = $entry['id'];
+		if ( ( (int) $form['id'] ) !== ( (int) $this->edit_form_id ) ) {
+			return;
+		}
+
+		// If we are updating.
+		// if (( ( (int) $form['id'] ) === ( (int) $this->edit_form_id ) )) {
+		// 	$update = true;
+		// 	$event_id = ! empty( $_REQUEST['post_id'] ) ? preg_replace('#[^\d]#i', '', $_REQUEST['post_id']) : false;
+		// 	if (empty( $event_id )) {
+		// 		error_log("Could not update new event - {$entry_id}");
+		// 	}
+		// }
+		
+		//getting post and thumbnail image
+		$post = get_post( $post_id );
+		$entry_id = $entry['id'];
+		error_log("After POST UPDATE for {$post_id} post type {$post->post_type}");
+		//update_post_meta($post_id, 'entry_id', $entry_id);
+		if ($post->post_type === Gf_Event_Intake_Event_CPT::VENUE_SLUG) {
+			gform_update_meta( $entry_id, 'venue_post_id', $post_id );
+		} 
+		else if ($post->post_type === Gf_Event_Intake_Event_CPT::EVENT_SLUG) {
+			// Connect the event and venue data.
+			// gform_update_meta( $entry_id, 'event_post_id', $post_id );
+			// $created_venue_post_id = gform_get_meta($entry_id, 'venue_post_id');
+			// if (!empty($created_venue_post_id)) {
+			// 	update_post_meta($post_id, 'venue', (int) $created_venue_post_id);
+			// }
+
+			// Insert the Cast&Crew data.
+			$cast_crew_entries_string = get_post_meta($post_id, 'cast_crew_raw_data', true);
+			if (!empty($cast_crew_entries_string)) {
+				$cast_crew_entries = explode(",", $cast_crew_entries_string);
+				$count = 0;
+				foreach($cast_crew_entries as $index => $cast_entry_id) {
+					$cast_entry = GFAPI::get_entry( $cast_entry_id );
+					if (empty($cast_entry)) {
+						continue;
+					}
+
+					if (!empty($cast_entry[5])) {
+						$thumbnail_entry_key = Gf_Event_Intake_Event_CPT::$cast_crew_mapping['image'];
+						$attachment_id = attachment_url_to_postid($cast_entry[ $thumbnail_entry_key ]);
+						if (!empty($attachment_id)) {
+							update_post_meta($post_id, "cast_crew_{$index}_image", $attachment_id );
+							//gform_update_meta($cast_entry_id, 'attachment_id', $attachment_id);
+							$attachment_data = array(
+								'ID' => $attachment_id,
+								'post_parent' => $post_id,
+							);
+							wp_update_post($attachment_data);
+						}
+					}
+					update_post_meta($post_id, "cast_crew_{$index}_title", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['title'] ] );
+					update_post_meta($post_id, "cast_crew_{$index}_subtitle", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['subtitle'] ] );
+					update_post_meta($post_id, "cast_crew_{$index}_desc", $cast_entry[ Gf_Event_Intake_Event_CPT::$cast_crew_mapping['desc'] ] );
+					$count++;
+				}
+				update_post_meta($post_id, "cast_crew", $count );
+			}
+
+			// Prepare the seating data.
+			$seating_attrs = [];
+			$seating_entries_string = get_post_meta($post_id, 'seating_raw_data', true);
+			if (!empty($seating_entries_string)) {
+				$seating_entries = explode(",", $seating_entries_string);				
+				foreach($seating_entries as $index => $seating_entry_id) {
+					$seating_entry = GFAPI::get_entry( $seating_entry_id );
+					if (empty($seating_entry)) {
+						continue;
+					}
+
+					$seating_type = !empty($seating_entry[1]) ? $seating_entry[1] : '';
+					$max_qty = !empty($seating_entry[2]) ? $seating_entry[2] : '';
+					$price = !empty($seating_entry[3]) ? $seating_entry[3] : '';
+
+					if (!empty($seating_type)) {
+						gform_update_meta( $seating_entry_id, 'seating_type', $seating_type );
+						$seating_attrs[$seating_type] = [
+							'name'		=> $seating_type,
+							'quantity' => (int) $max_qty,
+							'price'	=> $price,
+						];
+
+						// $wc_attribute = new WC_Product_Attribute();
+						// $wc_attribute->set_id( wc_attribute_taxonomy_id_by_name( self::COLOUR_TAX ) );
+						// $wc_attribute->set_name( self::COLOUR_TAX );
+						// $wc_attribute->set_visible( 1 );
+						// $wc_attribute->set_variation( 1 );
+						// $wc_attribute->set_position( 0 );
+					}
+				}
+			}
+
+			// Create the product data.
+			$dates_entries_string = get_post_meta($post_id, 'dates_raw_data', true);
+			$product_api = new Gf_Event_Intake_Product();
+			$update = false;
+			$related_product_ids = [];
+			if (!empty($dates_entries_string)) {
+				// Create a product for each date
+				$content = sprintf('%s </br></br>Event: <a href="%s" target="_blank">%s</a>', $post->post_content, get_permalink($post_id), $post->post_title);
+				$product_data = [
+					//'name'                      => $post->post_title,
+					'description'               => $content,
+					'short_description'         => $content,
+					'sku'                       => $post->post_name,
+					'status'					=> 'pending',
+				];
+				// Set the product featured image.
+				$thumbnail_id = get_post_thumbnail_id($post_id);
+				if (!empty($thumbnail_id)) {
+					$product_data['image_id'] = $thumbnail_id;
+				}
+				$date_entries = explode(",", $dates_entries_string);
+				foreach($date_entries as $index => $date_entry_id) :
+					$date_entry = GFAPI::get_entry( $date_entry_id );
+					if (empty($date_entry)) {
+						continue;
+					}
+
+					$pid = gform_get_meta($date_entry_id, 'product_id');
+					if (!empty( $pid )) {
+						$variable_product_id = (int) $pid;
+						$variable_product = wc_get_product($variable_product_id);
+						if (empty($variable_product)) {
+							continue;
+						}
+						$update = true;
+					}
+					
+					$start_date = !empty($date_entry[1]) ? $date_entry[1] : '';
+					$start_time = !empty($date_entry[4]) ? $date_entry[4] : '';
+					$end_date = !empty($date_entry[3]) ? $date_entry[3] : '';
+					$end_time = !empty($date_entry[2]) ? $date_entry[2] : '';
+
+					$performance_date = "{$start_date} {$start_time}";
+					$performance_end_date = "{$end_date} {$end_time}";
+					$performance_datetime_gmt = strtotime("{$performance_date}") - (int) ( get_option( 'gmt_offset' ) * HOUR_IN_SECONDS );
+					$performance_date_string = wp_date('YmdHi', $performance_datetime_gmt);
+					
+					if ($update) {
+						// $variable_product->set_description( $content );
+						// $variable_product->set_image_id( $thumbnail_id );
+						// $variable_product->set_short_description( $content );
+						// $variable_product->set_name( "{$post->post_title} - {$performance_date}" );
+						// $variable_product->set_sku( "{$post_id}-{$performance_date_string}" );
+						// $variable_product->set_attributes($seating_attrs);
+						unset($product_data['status']);
+						$product_data['name'] = "{$post->post_title} - {$performance_date}";
+						$product_data['attributes'] = $seating_attrs;
+						$product_data['sku']	 = "{$post_id}-{$performance_date_string}";
+						$variable_product->set_props($product_data);
+						$variable_product->save();
+					} else {
+						$product_data['name'] = "{$post->post_title} - {$performance_date}";
+						$product_data['attributes'] = $seating_attrs;
+						$product_data['sku']	 = "{$post_id}-{$performance_date_string}";
+						$variable_product = $product_api->create_variable_product( $product_data );
+					}
+					
+					if (is_wp_error($variable_product)) {
+						$msg = $variable_product->get_error_message();
+						error_log("GF-IN - Could not create/update product - {$msg}");
+					} else {
+						$variable_product_id = $variable_product->get_id();
+						$related_product_ids[] = $variable_product_id;
+						if (!$update) {
+							gform_update_meta( $date_entry_id, 'product_id', $variable_product_id );
+						}
 						update_post_meta($variable_product_id, 'performance_date', $performance_date);
 						update_post_meta($variable_product_id, 'performance_end_date', $performance_end_date);
 						update_post_meta($variable_product_id, 'event_post_id', $post_id);

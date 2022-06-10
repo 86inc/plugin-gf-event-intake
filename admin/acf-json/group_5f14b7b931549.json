@@ -210,6 +210,24 @@
                     "new_lines": ""
                 }
             ]
+        },
+        {
+            "key": "field_5f442f257deaa",
+            "label": "Producer",
+            "name": "author",
+            "type": "user",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "role": "",
+            "allow_null": 0,
+            "multiple": 0,
+            "return_format": "id"
         }
     ],
     "location": [
@@ -229,5 +247,5 @@
     "hide_on_screen": "",
     "active": 1,
     "description": "Event Post Type",
-    "modified": 1595361950
+    "modified": 1598304199
 }

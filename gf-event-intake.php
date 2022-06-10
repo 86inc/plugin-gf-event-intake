@@ -16,7 +16,7 @@
  * Plugin Name:       Gravity Forms Event Intake
  * Plugin URI:        newyorkdreamtickets.com
  * Description:       Create events and performance products for newyorkdreamtickets.com.
- * Version:           1.2
+ * Version:           1.3
  * Author:            Jonathan Bouganim
  * Author URI:        86inc.co
  * License:           GPL-2.0+
@@ -142,4 +142,4 @@ function psp_add_role_caps() {
         $role->add_cap( 'delete_published_event' );
     
     }
-}    
+}

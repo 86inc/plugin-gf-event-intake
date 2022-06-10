@@ -80,6 +80,9 @@ genesis_markup(
 
                 <header class="entry-header">
                 <h1 class="entry-title"><?php the_title() ?></h1>
+                <?php if ( get_post_status( get_the_ID() ) === 'pending' ) : ?>
+                    <h3>(Pending Approval)</h3>
+                <?php endif; ?>     
                 </header>
                 <?php
                 /**
@@ -142,34 +145,41 @@ genesis_markup(
                 <div class="textevent"><?php echo $venue_location ?></div>
                 <h3 style="margin: 30px auto 16px auto;">Producer Notes</h3>
                 <div class="textlarge">Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe.</div>
-                <h3 style="margin: 30px 0 16px 7px; text-align: left;">Event Members</h3>
-                <span class="cast-crew">
-                <?php if (empty($cast_crew)) : ?>
-                    No event members yet!
-                <?php else : ?>    
-                    <?php foreach($cast_crew as $crew_member) : ?>
-                    <div class="textsmall">
+                <?php if (!empty($cast_crew)) : ?>
+                    <h3 style="margin: 30px 0 16px 7px; text-align: left;">Event Members</h3>
+                    <span class="cast-crew">
                     <?php 
-                    if ( empty( $crew_member['image']['id'] ) ) {
-                        printf("no image set");
+                    $max = is_array($cast_crew) ? count($cast_crew) : intval($cast_crew); ?>    
+                    <?php for ($i=0; $i < $max; $i++) : ?>
+                    <?php //foreach($cast_crew as $crew_member) : ?>
+                    <div class="textsmall">
+                    <?php
+                    $crew_member_image_id = get_post_meta( get_the_ID(), "cast_crew_{$i}_image", true );
+                    if ( empty( $crew_member_image_id ) ) {
+                        //printf("no image set");
                     } else {
-                        $thumbnail_url = wp_get_attachment_image_src( $crew_member['image']['id'], 'thumbnail' );
+                        $thumbnail_url = wp_get_attachment_image_src( $crew_member_image_id, 'thumbnail' );
                         printf('<img class="alignleft size-tiny" src="%s" width="80" height="80" />', $thumbnail_url[0] );
                     }
-                    if (!empty($crew_member['title'])) {
-                        printf('<span class="crew-title">%s</span>', $crew_member['title']);
+                    $crew_member_title = get_post_meta( get_the_ID(), "cast_crew_{$i}_title", true );
+                    if (!empty( $crew_member_title )) {
+                        printf('<span class="crew-title">%s</span>', $crew_member_title );
                     }
-                    if (!empty($crew_member['subtitle'])) {
-                        printf('<span class="crew-subtitle">%s</span>', $crew_member['subtitle']);
+                    $crew_member_subtitle = get_post_meta( get_the_ID(), "cast_crew_{$i}_subtitle", true );
+                    if (!empty( $crew_member_subtitle )) {
+                        printf('<span class="crew-subtitle">%s</span>', $crew_member_subtitle );
                     }
-                    if (!empty($crew_member['desc'])) {
-                        printf('<span class="crew-desc">%s</span>', $crew_member['desc']);
+                    $crew_member_desc = get_post_meta( get_the_ID(), "cast_crew_{$i}_desc", true );
+                    if (!empty( $crew_member_desc )) {
+                        printf('<span class="crew-desc">%s</span>', $crew_member_desc );
                     }
                     ?>
                     </div>
-                    <?php endforeach; ?>
+                    <?php //endforeach; ?>
+                    <?php endfor; ?>
+                    </span>
                 <?php endif; ?>
-                </span>
+                
                 <p style="margin: 30px 0; color: #000000;"></p>
                 <?php
                 
